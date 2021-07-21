@@ -35,19 +35,19 @@ class _CallScreenState extends State<CallScreen> {
 
   @override
   void dispose() {
-    // clear users
-    _users.clear();
-    // destroy sdk
     if (mounted) {
+      // destroy sdk
       _engine.leaveChannel();
       _engine.destroy();
       _channel?.leave();
+      _allUsers.clear();
+
+      _broadcaster.clear();
+      _audience.clear();
+      // clear users
+      _users.clear();
     }
 
-    _allUsers.clear();
-
-    _broadcaster.clear();
-    _audience.clear();
     super.dispose();
   }
 
@@ -78,7 +78,7 @@ class _CallScreenState extends State<CallScreen> {
   Future<void> _initAgoraRtcEngine() async {
     _engine = await RtcEngine.create(appID);
     await _engine.disableVideo();
-    await _engine.enableAudio();
+    await _engine.disableAudio();
     await _engine.setChannelProfile(ChannelProfile.LiveBroadcasting);
     await _engine.setClientRole(widget.role);
   }
@@ -250,68 +250,88 @@ class _CallScreenState extends State<CallScreen> {
   /// Toolbar layout
   Widget _toolbar() {
     return widget.role == ClientRole.Audience
-        ? const SizedBox()
-        : Container(
-            alignment: Alignment.bottomCenter,
-            padding: const EdgeInsets.symmetric(vertical: 48),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: <Widget>[
-                RawMaterialButton(
-                  onPressed: _onToggleMute,
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  elevation: 2.0,
-                  fillColor: muted ? Colors.blueAccent : Colors.white,
-                  padding: const EdgeInsets.all(15.0),
-                  child: Row(
-                    children: [
-                      Icon(
-                        muted ? Icons.mic_off : Icons.mic,
-                        color: muted ? Colors.white : Colors.blueAccent,
-                        size: 20.0,
-                      ),
-                      const SizedBox(width: 5),
-                      muted
-                          ? Text(
-                              'Unmute',
-                              style: buttonStyle,
-                            )
-                          : Text(
-                              'Mute',
-                              style: buttonStyle.copyWith(color: Colors.black),
-                            )
-                    ],
+        ? SizedBox(
+            width: 200,
+            child: MaterialButton(
+              onPressed: () => _onChangeRole(context),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+              elevation: 2.0,
+              color: Colors.green,
+              padding: const EdgeInsets.all(15.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.airplanemode_active,
+                    color: Colors.white,
+                    size: 20,
                   ),
-                ),
-                RawMaterialButton(
-                  onPressed: () => _onCallEnd(context),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  elevation: 2.0,
-                  fillColor: Colors.redAccent,
-                  padding: const EdgeInsets.all(15.0),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.call_end,
-                        color: Colors.white,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        'Disconnect',
-                        style: buttonStyle,
-                      )
-                    ],
-                  ),
-                ),
-              ],
+                  const SizedBox(width: 5),
+                  Text(
+                    'Broadcaster',
+                    style: buttonStyle,
+                  )
+                ],
+              ),
             ),
+          )
+        : Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              RawMaterialButton(
+                onPressed: _onToggleMute,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                elevation: 2.0,
+                fillColor: muted ? Colors.blueAccent : Colors.white,
+                padding: const EdgeInsets.all(15.0),
+                child: Row(
+                  children: [
+                    Icon(
+                      muted ? Icons.mic_off : Icons.mic,
+                      color: muted ? Colors.white : Colors.blueAccent,
+                      size: 20.0,
+                    ),
+                    const SizedBox(width: 5),
+                    muted
+                        ? Text('Unmute', style: buttonStyle)
+                        : Text('Mute',
+                            style: buttonStyle.copyWith(color: Colors.black))
+                  ],
+                ),
+              ),
+              RawMaterialButton(
+                onPressed: () => _onCallEnd(context),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                elevation: 2.0,
+                fillColor: Colors.redAccent,
+                padding: const EdgeInsets.all(15.0),
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.call_end,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 5),
+                    Text(
+                      'Disconnect',
+                      style: buttonStyle,
+                    )
+                  ],
+                ),
+              ),
+            ],
           );
   }
 
   void _onCallEnd(BuildContext context) {
+    Navigator.pop(context);
+  }
+
+  void _onChangeRole(BuildContext context) {
     Navigator.pop(context);
   }
 
@@ -349,9 +369,7 @@ class _CallScreenState extends State<CallScreen> {
                       : const SizedBox();
                 },
               )),
-          SizedBox(
-            height: MediaQuery.of(context).size.height * 0.1,
-          ),
+          SizedBox(height: MediaQuery.of(context).size.height * 0.1),
           const Padding(
             padding: EdgeInsets.all(12),
             child: Text(
@@ -359,11 +377,11 @@ class _CallScreenState extends State<CallScreen> {
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ),
-          Container(
+          SizedBox(
               height: MediaQuery.of(context).size.height * 0.2,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: _allUsers.length - _users.length,
+                itemCount: _allUsers.length,
                 itemBuilder: (BuildContext context, int index) {
                   return _users.contains(_allUsers.keys.toList()[index])
                       ? const SizedBox()
