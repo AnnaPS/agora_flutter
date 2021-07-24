@@ -1,22 +1,21 @@
-import 'package:agora_flutter/agora_home/view/user_view.dart';
+import 'package:agora_flutter/agora_audio/view/user_view.dart';
+import 'package:agora_flutter/utils/settings.dart';
 import 'package:agora_rtc_engine/rtc_engine.dart';
 import 'package:agora_rtm/agora_rtm.dart';
 import 'package:flutter/material.dart';
 
-const appID = '071046101ec643828b625b26d7c643a5';
-
 class CallScreen extends StatefulWidget {
-  const CallScreen(
+  CallScreen(
       {required this.channelName, required this.userName, required this.role});
   final String channelName;
   final String userName;
-  final ClientRole role;
+  late ClientRole role;
   @override
   _CallScreenState createState() => _CallScreenState();
 }
 
 class _CallScreenState extends State<CallScreen> {
-  static final _users = <int>[];
+  static final joinedUsers = <int>[];
   final _infoStrings = <String>[];
   bool muted = false;
   bool _isLogin = false;
@@ -37,15 +36,16 @@ class _CallScreenState extends State<CallScreen> {
   void dispose() {
     if (mounted) {
       // destroy sdk
-      _engine.leaveChannel();
-      _engine.destroy();
+      _engine
+        ..leaveChannel()
+        ..destroy();
       _channel?.leave();
       _allUsers.clear();
 
       _broadcaster.clear();
       _audience.clear();
       // clear users
-      _users.clear();
+      joinedUsers.clear();
     }
 
     super.dispose();
@@ -85,56 +85,53 @@ class _CallScreenState extends State<CallScreen> {
 
   /// Add agora event handlers
   void _addAgoraEventHandlers() {
-    _engine.setEventHandler(RtcEngineEventHandler(
-      error: (code) {
+    _engine.setEventHandler(RtcEngineEventHandler(error: (code) {
+      setState(() {
+        final info = 'onError: $code';
+        _infoStrings.add(info);
+      });
+    }, joinChannelSuccess: (channel, uid, elapsed) async {
+      setState(() {
+        final info = 'onJoinChannel: $channel, uid: $uid';
+        _infoStrings.add(info);
+        localUid = uid;
+        _allUsers.putIfAbsent(uid, () => widget.userName);
+      });
+      if (widget.role == ClientRole.Broadcaster) {
         setState(() {
-          final info = 'onError: $code';
-          _infoStrings.add(info);
+          joinedUsers.add(uid);
         });
-      },
-      joinChannelSuccess: (channel, uid, elapsed) async {
-        setState(() {
-          final info = 'onJoinChannel: $channel, uid: $uid';
-          _infoStrings.add(info);
-          localUid = uid;
-          _allUsers.putIfAbsent(uid, () => widget.userName);
-        });
-        if (widget.role == ClientRole.Broadcaster) {
-          setState(() {
-            _users.add(uid);
-          });
-        }
-      },
-      leaveChannel: (stats) async {
-        setState(() {
-          _infoStrings.add('onLeaveChannel');
-          _users.clear();
-          _allUsers.remove(localUid);
-        });
-        await _channel
-            ?.sendMessage(AgoraRtmMessage.fromText('$localUid:leave'));
-      },
-      userJoined: (uid, elapsed) {
-        setState(() {
-          final info = 'userJoined: $uid';
-          _infoStrings.add(info);
-          _users.add(uid);
-        });
-      },
-      userOffline: (uid, reason) {
-        setState(() {
-          final info = 'userOffline: $uid , reason: $reason';
-          _infoStrings.add(info);
-          _users.remove(uid);
-        });
-      },
-      firstRemoteVideoFrame: (uid, width, height, elapsed) {
-        setState(() {
-          final info = 'firstRemoteVideoFrame: $uid';
-          _infoStrings.add(info);
-        });
-      },
-    ));
+      }
+    }, leaveChannel: (stats) async {
+      setState(() {
+        _infoStrings.add('onLeaveChannel');
+        joinedUsers.clear();
+        _allUsers.remove(localUid);
+      });
+      await _channel?.sendMessage(AgoraRtmMessage.fromText('$localUid:leave'));
+    }, userJoined: (uid, elapsed) {
+      setState(() {
+        final info = 'userJoined: $uid';
+        _infoStrings.add(info);
+        joinedUsers.add(uid);
+      });
+    }, userOffline: (uid, reason) {
+      setState(() {
+        final info = 'userOffline: $uid , reason: $reason';
+        _infoStrings.add(info);
+        joinedUsers.remove(uid);
+      });
+    }, firstRemoteVideoFrame: (uid, width, height, elapsed) {
+      setState(() {
+        final info = 'firstRemoteVideoFrame: $uid';
+        _infoStrings.add(info);
+      });
+    }, clientRoleChanged: (oldRole, newRole) {
+      setState(() {
+        final info = 'clientRoleChanged: old: $oldRole - new $newRole';
+        _infoStrings.add(info);
+      });
+    }));
   }
 
   void _createClient() async {
@@ -191,7 +188,7 @@ class _CallScreenState extends State<CallScreen> {
           _allUsers.remove(int.parse(userData?[0] ?? '0'));
         });
       } else {
-        print('Broadcasters list : $_users');
+        print('Broadcasters list : $joinedUsers');
         print('All users lists: ${_allUsers.values}');
         setState(() {
           _allUsers.putIfAbsent(
@@ -200,10 +197,10 @@ class _CallScreenState extends State<CallScreen> {
       }
     };
 
-    for (var i = 0; i < _users.length; i++) {
-      if (_allUsers.containsKey(_users[i])) {
+    for (var i = 0; i < joinedUsers.length; i++) {
+      if (_allUsers.containsKey(joinedUsers[i])) {
         setState(() {
-          _broadcaster.add(_allUsers[_users[i]] ?? '');
+          _broadcaster.add(_allUsers[joinedUsers[i]] ?? '');
         });
       } else {
         setState(() {
@@ -332,7 +329,10 @@ class _CallScreenState extends State<CallScreen> {
   }
 
   void _onChangeRole(BuildContext context) {
-    Navigator.pop(context);
+    setState(() {
+      widget.role = ClientRole.Broadcaster;
+    });
+    _engine.setClientRole(ClientRole.Broadcaster);
   }
 
   void _onToggleMute() {
@@ -359,11 +359,11 @@ class _CallScreenState extends State<CallScreen> {
               height: MediaQuery.of(context).size.height * 0.2,
               child: ListView.builder(
                 scrollDirection: Axis.horizontal,
-                itemCount: _users.length,
+                itemCount: joinedUsers.length,
                 itemBuilder: (BuildContext context, int index) {
-                  return _allUsers.containsKey(_users[index])
+                  return _allUsers.containsKey(joinedUsers[index])
                       ? UserView(
-                          userName: _allUsers[_users[index]] ?? 'User',
+                          userName: _allUsers[joinedUsers[index]] ?? 'User',
                           role: ClientRole.Broadcaster,
                         )
                       : const SizedBox();
@@ -383,7 +383,7 @@ class _CallScreenState extends State<CallScreen> {
                 scrollDirection: Axis.horizontal,
                 itemCount: _allUsers.length,
                 itemBuilder: (BuildContext context, int index) {
-                  return _users.contains(_allUsers.keys.toList()[index])
+                  return joinedUsers.contains(_allUsers.keys.toList()[index])
                       ? const SizedBox()
                       : UserView(
                           role: ClientRole.Audience,

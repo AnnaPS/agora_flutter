@@ -97,6 +97,9 @@ unlinked_spec.ds
 **/ios/ServiceDefinitions.json
 **/ios/Runner/GeneratedPluginRegistrant.*
 
+# Settings
+**/lib/utils/settings.dart
+
 # Coverage
 coverage/
 

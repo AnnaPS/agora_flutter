@@ -137,7 +137,7 @@ class _AgoraHomeState extends State<AgoraHome> {
               SizedBox(
                 width: MediaQuery.of(context).size.width * 0.8,
                 height: MediaQuery.of(context).size.width * 0.16,
-                child: RaisedButton(
+                child: MaterialButton(
                   color: Colors.blue,
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15)),
