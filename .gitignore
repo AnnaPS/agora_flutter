@@ -98,7 +98,7 @@ unlinked_spec.ds
 **/ios/Runner/GeneratedPluginRegistrant.*
 
 # Settings
-**/lib/utils/settings.dart
+**/lib/utils/
 
 # Coverage
 coverage/
