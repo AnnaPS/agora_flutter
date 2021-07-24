@@ -236,7 +236,7 @@ class _CallVideoPageState extends State<CallVideoPage> {
             itemCount: _infoStrings.length,
             itemBuilder: (BuildContext context, int index) {
               if (_infoStrings.isEmpty) {
-                return Text(
+                return const Text(
                     "null"); // return type can't be null, a widget was required
               }
               return Padding(

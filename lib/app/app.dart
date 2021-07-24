@@ -5,7 +5,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT.
 
-import 'package:agora_flutter/agora_video/agora_video_home.dart';
+import 'package:agora_flutter/agora_main/view/agora_main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:agora_flutter/l10n/l10n.dart';
@@ -23,9 +23,12 @@ class App extends StatelessWidget {
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: AgoraVideoHome(),
+      home: AgoraMain(),
     );
   }
 }

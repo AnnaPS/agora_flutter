@@ -17,6 +17,8 @@ dependencies:
   permission_handler: ^8.1.4+1
   agora_rtc_engine: 4.0.5
   agora_rtm: 1.0.0-rc.1
+  fancy_bottom_navigation: ^0.3.3
+  adaptive_dialog: ^1.1.0
 
 dev_dependencies:
   flutter_test:
