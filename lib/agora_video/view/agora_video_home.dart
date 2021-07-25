@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:agora_flutter/utils/permissions_handler.dart';
 import 'package:agora_rtc_engine/rtc_engine.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -34,9 +35,9 @@ class _AgoraVideoHomeState extends State<AgoraVideoHome> {
         padding: const EdgeInsets.symmetric(horizontal: 20),
         height: 400,
         child: Column(
-          children: <Widget>[
+          children: [
             Row(
-              children: <Widget>[
+              children: [
                 Expanded(
                     child: TextField(
                   controller: _channelController,
@@ -112,8 +113,8 @@ class _AgoraVideoHomeState extends State<AgoraVideoHome> {
     });
     if (_channelController.text.isNotEmpty) {
       // await for camera and mic permissions before pushing video page
-      await _handleCameraAndMic(Permission.camera);
-      await _handleCameraAndMic(Permission.microphone);
+      await handleCameraAndMic(Permission.camera);
+      await handleCameraAndMic(Permission.microphone);
       // push video page with given channel name
       await Navigator.push(
         context,
@@ -125,10 +126,5 @@ class _AgoraVideoHomeState extends State<AgoraVideoHome> {
         ),
       );
     }
-  }
-
-  Future<void> _handleCameraAndMic(Permission permission) async {
-    final status = await permission.request();
-    print(status);
   }
 }

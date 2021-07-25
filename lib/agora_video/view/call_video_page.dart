@@ -74,39 +74,47 @@ class _CallVideoPageState extends State<CallVideoPage> {
 
   /// Add agora event handlers
   void _addAgoraEventHandlers() {
-    _engine.setEventHandler(RtcEngineEventHandler(error: (code) {
-      setState(() {
-        final info = 'onError: $code';
-        _infoStrings.add(info);
-      });
-    }, joinChannelSuccess: (channel, uid, elapsed) {
-      setState(() {
-        final info = 'onJoinChannel: $channel, uid: $uid';
-        _infoStrings.add(info);
-      });
-    }, leaveChannel: (stats) {
-      setState(() {
-        _infoStrings.add('onLeaveChannel');
-        _users.clear();
-      });
-    }, userJoined: (uid, elapsed) {
-      setState(() {
-        final info = 'userJoined: $uid';
-        _infoStrings.add(info);
-        _users.add(uid);
-      });
-    }, userOffline: (uid, elapsed) {
-      setState(() {
-        final info = 'userOffline: $uid';
-        _infoStrings.add(info);
-        _users.remove(uid);
-      });
-    }, firstRemoteVideoFrame: (uid, width, height, elapsed) {
-      setState(() {
-        final info = 'firstRemoteVideo: $uid ${width}x $height';
-        _infoStrings.add(info);
-      });
-    }));
+    _engine.setEventHandler(RtcEngineEventHandler(
+      error: (code) {
+        setState(() {
+          final info = 'onError: $code';
+          _infoStrings.add(info);
+        });
+      },
+      joinChannelSuccess: (channel, uid, elapsed) {
+        setState(() async {
+          final info = 'onJoinChannel: $channel, uid: $uid';
+          _infoStrings.add(info);
+          await _engine.getUserInfoByUid(uid);
+        });
+      },
+      leaveChannel: (stats) {
+        setState(() {
+          _infoStrings.add('onLeaveChannel');
+          _users.clear();
+        });
+      },
+      userJoined: (uid, elapsed) {
+        setState(() {
+          final info = 'userJoined: $uid';
+          _infoStrings.add(info);
+          _users.add(uid);
+        });
+      },
+      userOffline: (uid, elapsed) {
+        setState(() {
+          final info = 'userOffline: $uid';
+          _infoStrings.add(info);
+          _users.remove(uid);
+        });
+      },
+      firstRemoteVideoFrame: (uid, width, height, elapsed) {
+        setState(() {
+          final info = 'firstRemoteVideo: $uid ${width}x $height';
+          _infoStrings.add(info);
+        });
+      },
+    ));
   }
 
   /// Helper function to get list of native views
@@ -173,51 +181,94 @@ class _CallVideoPageState extends State<CallVideoPage> {
   }
 
   /// Toolbar layout
-  Widget _toolbar() {
-    if (widget.role == ClientRole.Audience) return Container();
-    return Container(
-      alignment: Alignment.bottomCenter,
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          RawMaterialButton(
-            onPressed: _onToggleMute,
-            shape: const CircleBorder(),
-            elevation: 2.0,
-            fillColor: muted ? Colors.blueAccent : Colors.white,
-            padding: const EdgeInsets.all(12.0),
-            child: Icon(
-              muted ? Icons.mic_off : Icons.mic,
-              color: muted ? Colors.white : Colors.blueAccent,
-              size: 20.0,
-            ),
-          ),
-          RawMaterialButton(
-            onPressed: () => _onCallEnd(context),
-            shape: const CircleBorder(),
-            elevation: 2.0,
-            fillColor: Colors.redAccent,
-            padding: const EdgeInsets.all(15.0),
-            child: const Icon(
-              Icons.call_end,
-              color: Colors.white,
-              size: 35.0,
-            ),
-          ),
-          RawMaterialButton(
-            onPressed: _onSwitchCamera,
-            shape: const CircleBorder(),
-            elevation: 2.0,
-            fillColor: Colors.white,
-            padding: const EdgeInsets.all(12.0),
-            child: const Icon(
-              Icons.switch_camera,
-              color: Colors.blueAccent,
-              size: 20.0,
-            ),
-          )
+  Widget _toolbar(String? channelName) {
+    if (widget.role == ClientRole.Audience) {
+      return Stack(
+        children: [
+          _channelNameHeader(channelName),
+          Container(),
         ],
+      );
+    }
+    return Stack(
+      fit: StackFit.loose,
+      children: [
+        _channelNameHeader(channelName),
+        Container(
+          alignment: Alignment.bottomCenter,
+          padding: const EdgeInsets.symmetric(vertical: 48),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              RawMaterialButton(
+                onPressed: _onToggleMute,
+                shape: const CircleBorder(),
+                elevation: 2.0,
+                fillColor: muted ? Colors.blueAccent : Colors.white,
+                padding: const EdgeInsets.all(12.0),
+                child: Icon(
+                  muted ? Icons.mic_off : Icons.mic,
+                  color: muted ? Colors.white : Colors.blueAccent,
+                  size: 20.0,
+                ),
+              ),
+              RawMaterialButton(
+                onPressed: () => _onCallEnd(context),
+                shape: const CircleBorder(),
+                elevation: 2.0,
+                fillColor: Colors.redAccent,
+                padding: const EdgeInsets.all(15.0),
+                child: const Icon(
+                  Icons.call_end,
+                  color: Colors.white,
+                  size: 35.0,
+                ),
+              ),
+              RawMaterialButton(
+                onPressed: _onSwitchCamera,
+                shape: const CircleBorder(),
+                elevation: 2.0,
+                fillColor: Colors.white,
+                padding: const EdgeInsets.all(12.0),
+                child: const Icon(
+                  Icons.switch_camera,
+                  color: Colors.blueAccent,
+                  size: 20.0,
+                ),
+              )
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Show tag with channel name
+  Widget _channelNameHeader(String? channelName) {
+    return Align(
+      alignment: Alignment.topCenter,
+      child: IntrinsicHeight(
+        child: IntrinsicWidth(
+          child: Container(
+            alignment: Alignment.center,
+            margin: const EdgeInsets.symmetric(
+              vertical: 8,
+              horizontal: 8,
+            ),
+            padding: const EdgeInsets.symmetric(
+              vertical: 8,
+              horizontal: 16,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(5),
+            ),
+            child: Text(
+              channelName ?? 'Unknown',
+              style: const TextStyle(color: Colors.black),
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -300,7 +351,7 @@ class _CallVideoPageState extends State<CallVideoPage> {
           children: <Widget>[
             _viewRows(),
             _panel(),
-            _toolbar(),
+            _toolbar(widget.channelName),
           ],
         ),
       ),
