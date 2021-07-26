@@ -1,8 +1,11 @@
 import 'package:agora_flutter/agora_channels/view/channels.dart';
+import 'package:agora_flutter/agora_video/bloc/agora_video_bloc.dart';
+import 'package:agora_flutter/agora_video/bloc/agora_video_state.dart';
 import 'package:agora_flutter/agora_video/view/agora_video_home.dart';
 import 'package:fancy_bottom_navigation/fancy_bottom_navigation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class AgoraMain extends StatefulWidget {
   AgoraMain({Key? key}) : super(key: key);
@@ -13,7 +16,7 @@ class AgoraMain extends StatefulWidget {
 
 class _AgoraMainState extends State<AgoraMain> {
   int currentPage = 0;
-  final _pageOptions = [AgoraVideoHome(), ChannelPage()];
+  final _pageOptions = [AgoraVideoHome(), const ChannelPage()];
 
   GlobalKey bottomNavigationKey = GlobalKey();
 

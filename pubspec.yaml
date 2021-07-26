@@ -19,6 +19,7 @@ dependencies:
   agora_rtm: 1.0.0-rc.1
   fancy_bottom_navigation: ^0.3.3
   adaptive_dialog: ^1.1.0
+  equatable: ^2.0.3
 
 dev_dependencies:
   flutter_test:

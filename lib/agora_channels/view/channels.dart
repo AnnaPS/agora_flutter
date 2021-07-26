@@ -14,6 +14,7 @@ class ChannelPage extends StatefulWidget {
 
 class _ChannelPageState extends State<ChannelPage> {
   List<String?> newChannelOptions = [];
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

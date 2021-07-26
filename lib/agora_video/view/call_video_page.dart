@@ -1,8 +1,12 @@
+import 'package:agora_flutter/agora_video/bloc/agora_video_bloc.dart';
+import 'package:agora_flutter/agora_video/bloc/agora_video_event.dart';
+import 'package:agora_flutter/agora_video/bloc/agora_video_state.dart';
 import 'package:agora_flutter/utils/settings.dart';
 import 'package:agora_rtc_engine/rtc_engine.dart';
 import 'package:agora_rtc_engine/rtc_local_view.dart' as RtcLocalView;
 import 'package:agora_rtc_engine/rtc_remote_view.dart' as RtcRemoteView;
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class CallVideoPage extends StatefulWidget {
   /// non-modifiable channel name of the page
@@ -21,7 +25,8 @@ class CallVideoPage extends StatefulWidget {
 
 class _CallVideoPageState extends State<CallVideoPage> {
   final _users = <int>[];
-  final _infoStrings = <String>[];
+
+  // final _infoStrings = <String>[];
   bool muted = false;
   late RtcEngine _engine;
 
@@ -29,6 +34,7 @@ class _CallVideoPageState extends State<CallVideoPage> {
   void dispose() {
     // clear users
     _users.clear();
+
     // destroy sdk
     _engine
       ..leaveChannel()
@@ -37,26 +43,32 @@ class _CallVideoPageState extends State<CallVideoPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    //clear info strings
+    context.read<AgoraVideoBloc>().add(ClearInfoStringsList());
+    super.didChangeDependencies();
+  }
+
+  @override
   void initState() {
     super.initState();
     // initialize agora sdk
-    initialize();
+    WidgetsBinding.instance?.addPostFrameCallback((_) => initialize(context));
   }
 
-  Future<void> initialize() async {
+  Future<void> initialize(BuildContext myContext) async {
     if (appID.isEmpty) {
-      setState(() {
-        _infoStrings
-          ..add(
-            'APP_ID missing, please provide your APP_ID in settings.dart',
-          )
-          ..add('Agora Engine is not starting');
-      });
+      context.read<AgoraVideoBloc>().add(UpdateInfoStringsList(
+          newText:
+              'APP_ID missing, please provide your APP_ID in settings.dart'));
+      context
+          .read<AgoraVideoBloc>()
+          .add(UpdateInfoStringsList(newText: 'Agora Engine is not starting'));
       return;
     }
 
     await _initAgoraRtcEngine();
-    _addAgoraEventHandlers();
+    _addAgoraEventHandlers(myContext);
     await _engine.enableWebSdkInteroperability(true);
     var configuration = VideoEncoderConfiguration()
       ..dimensions = VideoDimensions(width: 1920, height: 1080);
@@ -73,46 +85,44 @@ class _CallVideoPageState extends State<CallVideoPage> {
   }
 
   /// Add agora event handlers
-  void _addAgoraEventHandlers() {
+  void _addAgoraEventHandlers(BuildContext context) {
     _engine.setEventHandler(RtcEngineEventHandler(
       error: (code) {
-        setState(() {
-          final info = 'onError: $code';
-          _infoStrings.add(info);
-        });
+        context
+            .read<AgoraVideoBloc>()
+            .add(UpdateInfoStringsList(newText: 'onError: $code'));
       },
       joinChannelSuccess: (channel, uid, elapsed) {
-        setState(() async {
-          final info = 'onJoinChannel: $channel, uid: $uid';
-          _infoStrings.add(info);
-          await _engine.getUserInfoByUid(uid);
-        });
+        context.read<AgoraVideoBloc>().add(
+              UpdateInfoStringsList(
+                  newText: 'onJoinChannel: $channel, uid: $uid'),
+            );
       },
       leaveChannel: (stats) {
-        setState(() {
-          _infoStrings.add('onLeaveChannel');
-          _users.clear();
-        });
+        setState(_users.clear);
+        context
+            .read<AgoraVideoBloc>()
+            .add(UpdateInfoStringsList(newText: 'onLeaveChannel'));
       },
       userJoined: (uid, elapsed) {
         setState(() {
-          final info = 'userJoined: $uid';
-          _infoStrings.add(info);
           _users.add(uid);
         });
+        context
+            .read<AgoraVideoBloc>()
+            .add(UpdateInfoStringsList(newText: 'userJoined: $uid'));
       },
       userOffline: (uid, elapsed) {
         setState(() {
-          final info = 'userOffline: $uid';
-          _infoStrings.add(info);
           _users.remove(uid);
         });
+        context
+            .read<AgoraVideoBloc>()
+            .add(UpdateInfoStringsList(newText: 'userOffline: $uid'));
       },
       firstRemoteVideoFrame: (uid, width, height, elapsed) {
-        setState(() {
-          final info = 'firstRemoteVideo: $uid ${width}x $height';
-          _infoStrings.add(info);
-        });
+        context.read<AgoraVideoBloc>().add(UpdateInfoStringsList(
+            newText: 'firstRemoteVideo: $uid ${width}x $height'));
       },
     ));
   }
@@ -275,52 +285,56 @@ class _CallVideoPageState extends State<CallVideoPage> {
 
   /// Info panel to show logs
   Widget _panel() {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 48),
-      alignment: Alignment.bottomCenter,
-      child: FractionallySizedBox(
-        heightFactor: 0.5,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 48),
-          child: ListView.builder(
-            reverse: true,
-            itemCount: _infoStrings.length,
-            itemBuilder: (BuildContext context, int index) {
-              if (_infoStrings.isEmpty) {
-                return const Text(
-                    "null"); // return type can't be null, a widget was required
-              }
-              return Padding(
-                padding: const EdgeInsets.symmetric(
-                  vertical: 3,
-                  horizontal: 10,
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 2,
-                          horizontal: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.yellowAccent,
-                          borderRadius: BorderRadius.circular(5),
-                        ),
-                        child: Text(
-                          _infoStrings[index],
-                          style: const TextStyle(color: Colors.blueGrey),
-                        ),
+    return BlocBuilder<AgoraVideoBloc, AgoraVideoState>(
+      builder: (context, state) {
+        if (state is AgoraVideoStringInfoSuccess) {
+          return Container(
+            padding: const EdgeInsets.symmetric(vertical: 48),
+            alignment: Alignment.bottomCenter,
+            child: FractionallySizedBox(
+              heightFactor: 0.5,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 48),
+                child: ListView.builder(
+                  reverse: true,
+                  itemCount: state.infoString.length,
+                  itemBuilder: (BuildContext context, int index) {
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: 3,
+                        horizontal: 10,
                       ),
-                    )
-                  ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Flexible(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 2,
+                                horizontal: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.yellowAccent,
+                                borderRadius: BorderRadius.circular(5),
+                              ),
+                              child: Text(
+                                state.infoString[index],
+                                style: const TextStyle(color: Colors.blueGrey),
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    );
+                  },
                 ),
-              );
-            },
-          ),
-        ),
-      ),
+              ),
+            ),
+          );
+        } else {
+          return Container();
+        }
+      },
     );
   }
 
