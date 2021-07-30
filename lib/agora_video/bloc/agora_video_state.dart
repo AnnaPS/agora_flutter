@@ -14,7 +14,13 @@ class AgoraVideoStringInfoSuccess extends AgoraVideoState {
   List<Object?> get props => [infoString];
 }
 
-class AgoraVideoStringLeaveChannelSuccess extends AgoraVideoState {}
+class AgoraVideoStringLeaveChannelSuccess extends AgoraVideoState {
+  AgoraVideoStringLeaveChannelSuccess({required this.users});
+
+  final List<int> users;
+  @override
+  List<Object?> get props => [users];
+}
 
 class AgoraVideoCleanInfoStringsSuccess extends AgoraVideoState {
   AgoraVideoCleanInfoStringsSuccess({required this.infoString});
@@ -24,9 +30,22 @@ class AgoraVideoCleanInfoStringsSuccess extends AgoraVideoState {
 }
 
 class AgoraVideoJoinChannelSuccess extends AgoraVideoState {
-  AgoraVideoJoinChannelSuccess({required this.uid, required this.channel});
-  final String uid;
-  final String channel;
+  AgoraVideoJoinChannelSuccess({required this.users});
+  final List<int> users;
   @override
-  List<Object?> get props => [uid, channel];
+  List<Object?> get props => [users];
+}
+
+class AgoraVideoClearUserSuccess extends AgoraVideoState {
+  AgoraVideoClearUserSuccess({required this.users});
+  final List<int> users;
+  @override
+  List<Object?> get props => [users];
+}
+
+class AgoraVideoHandleMuteSuccess extends AgoraVideoState {
+  AgoraVideoHandleMuteSuccess({required this.isMuted});
+  final bool isMuted;
+  @override
+  List<Object?> get props => [isMuted];
 }

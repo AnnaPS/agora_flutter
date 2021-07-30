@@ -16,37 +16,22 @@ class CallVideoPage extends StatefulWidget {
   final ClientRole? role;
 
   /// Creates a call page with given channel name.
-  const CallVideoPage({Key? key, this.channelName, this.role})
-      : super(key: key);
+  CallVideoPage({Key? key, this.channelName, this.role}) : super(key: key);
 
   @override
   _CallVideoPageState createState() => _CallVideoPageState();
 }
 
 class _CallVideoPageState extends State<CallVideoPage> {
-  final _users = <int>[];
-
-  // final _infoStrings = <String>[];
   bool muted = false;
   late RtcEngine _engine;
-
   @override
   void dispose() {
-    // clear users
-    _users.clear();
-
     // destroy sdk
     _engine
       ..leaveChannel()
       ..destroy();
     super.dispose();
-  }
-
-  @override
-  void didChangeDependencies() {
-    //clear info strings
-    context.read<AgoraVideoBloc>().add(ClearInfoStringsList());
-    super.didChangeDependencies();
   }
 
   @override
@@ -93,29 +78,28 @@ class _CallVideoPageState extends State<CallVideoPage> {
             .add(UpdateInfoStringsList(newText: 'onError: $code'));
       },
       joinChannelSuccess: (channel, uid, elapsed) {
+        context.read<AgoraVideoBloc>().add(JoinToChannel(uid: uid));
+
         context.read<AgoraVideoBloc>().add(
               UpdateInfoStringsList(
                   newText: 'onJoinChannel: $channel, uid: $uid'),
             );
       },
       leaveChannel: (stats) {
-        setState(_users.clear);
         context
             .read<AgoraVideoBloc>()
             .add(UpdateInfoStringsList(newText: 'onLeaveChannel'));
+        // context.watch<AgoraVideoBloc>().add(ClearInfoStringsList());
+        // context.watch<AgoraVideoBloc>().add(ClearUserList());
       },
       userJoined: (uid, elapsed) {
-        setState(() {
-          _users.add(uid);
-        });
+        context.read<AgoraVideoBloc>().add(JoinToChannel(uid: uid));
         context
             .read<AgoraVideoBloc>()
             .add(UpdateInfoStringsList(newText: 'userJoined: $uid'));
       },
       userOffline: (uid, elapsed) {
-        setState(() {
-          _users.remove(uid);
-        });
+        context.read<AgoraVideoBloc>().add(UserRemoveChannel(uid: uid));
         context
             .read<AgoraVideoBloc>()
             .add(UpdateInfoStringsList(newText: 'userOffline: $uid'));
@@ -133,7 +117,10 @@ class _CallVideoPageState extends State<CallVideoPage> {
     if (widget.role == ClientRole.Broadcaster) {
       list.add(RtcLocalView.SurfaceView());
     }
-    _users.forEach((int uid) => list.add(RtcRemoteView.SurfaceView(uid: uid)));
+    var users = context.watch<AgoraVideoBloc>().users;
+    for (var uid in users) {
+      list.add(RtcRemoteView.SurfaceView(uid: uid));
+    }
     return list;
   }
 
@@ -195,8 +182,7 @@ class _CallVideoPageState extends State<CallVideoPage> {
     if (widget.role == ClientRole.Audience) {
       return Stack(
         children: [
-          _channelNameHeader(channelName),
-          Container(),
+          _channelNameHeader('$channelName-Audience'),
         ],
       );
     }
@@ -204,50 +190,68 @@ class _CallVideoPageState extends State<CallVideoPage> {
       fit: StackFit.loose,
       children: [
         _channelNameHeader(channelName),
-        Container(
-          alignment: Alignment.bottomCenter,
-          padding: const EdgeInsets.symmetric(vertical: 48),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              RawMaterialButton(
-                onPressed: _onToggleMute,
-                shape: const CircleBorder(),
-                elevation: 2.0,
-                fillColor: muted ? Colors.blueAccent : Colors.white,
-                padding: const EdgeInsets.all(12.0),
-                child: Icon(
-                  muted ? Icons.mic_off : Icons.mic,
-                  color: muted ? Colors.white : Colors.blueAccent,
-                  size: 20.0,
-                ),
+        BlocBuilder<AgoraVideoBloc, AgoraVideoState>(
+          buildWhen: (previous, current) =>
+              (current is AgoraVideoHandleMuteSuccess),
+          builder: (context, state) {
+            return Container(
+              alignment: Alignment.bottomCenter,
+              padding: const EdgeInsets.symmetric(vertical: 48),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  RawMaterialButton(
+                    onPressed: _onToggleMute,
+                    shape: const CircleBorder(),
+                    elevation: 2.0,
+                    fillColor: (state is AgoraVideoHandleMuteSuccess)
+                        ? state.isMuted
+                            ? Colors.blueAccent
+                            : Colors.white
+                        : Colors.white,
+                    padding: const EdgeInsets.all(12.0),
+                    child: Icon(
+                      (state is AgoraVideoHandleMuteSuccess)
+                          ? state.isMuted
+                              ? Icons.mic_off
+                              : Icons.mic
+                          : Icons.mic_off,
+                      color: (state is AgoraVideoHandleMuteSuccess)
+                          ? state.isMuted
+                              ? Colors.white
+                              : Colors.blueAccent
+                          : Colors.blueAccent,
+                      size: 20.0,
+                    ),
+                  ),
+                  RawMaterialButton(
+                    onPressed: () => _onCallEnd(context),
+                    shape: const CircleBorder(),
+                    elevation: 2.0,
+                    fillColor: Colors.redAccent,
+                    padding: const EdgeInsets.all(15.0),
+                    child: const Icon(
+                      Icons.call_end,
+                      color: Colors.white,
+                      size: 35.0,
+                    ),
+                  ),
+                  RawMaterialButton(
+                    onPressed: _onSwitchCamera,
+                    shape: const CircleBorder(),
+                    elevation: 2.0,
+                    fillColor: Colors.white,
+                    padding: const EdgeInsets.all(12.0),
+                    child: const Icon(
+                      Icons.switch_camera,
+                      color: Colors.blueAccent,
+                      size: 20.0,
+                    ),
+                  )
+                ],
               ),
-              RawMaterialButton(
-                onPressed: () => _onCallEnd(context),
-                shape: const CircleBorder(),
-                elevation: 2.0,
-                fillColor: Colors.redAccent,
-                padding: const EdgeInsets.all(15.0),
-                child: const Icon(
-                  Icons.call_end,
-                  color: Colors.white,
-                  size: 35.0,
-                ),
-              ),
-              RawMaterialButton(
-                onPressed: _onSwitchCamera,
-                shape: const CircleBorder(),
-                elevation: 2.0,
-                fillColor: Colors.white,
-                padding: const EdgeInsets.all(12.0),
-                child: const Icon(
-                  Icons.switch_camera,
-                  color: Colors.blueAccent,
-                  size: 20.0,
-                ),
-              )
-            ],
-          ),
+            );
+          },
         ),
       ],
     );
@@ -298,7 +302,7 @@ class _CallVideoPageState extends State<CallVideoPage> {
                 child: ListView.builder(
                   reverse: true,
                   itemCount: state.infoString.length,
-                  itemBuilder: (BuildContext context, int index) {
+                  itemBuilder: (context, index) {
                     return Padding(
                       padding: const EdgeInsets.symmetric(
                         vertical: 3,
@@ -318,7 +322,9 @@ class _CallVideoPageState extends State<CallVideoPage> {
                                 borderRadius: BorderRadius.circular(5),
                               ),
                               child: Text(
-                                state.infoString[index],
+                                state.infoString.isNotEmpty
+                                    ? state.infoString[index]
+                                    : 'No data',
                                 style: const TextStyle(color: Colors.blueGrey),
                               ),
                             ),
@@ -343,9 +349,8 @@ class _CallVideoPageState extends State<CallVideoPage> {
   }
 
   void _onToggleMute() {
-    setState(() {
-      muted = !muted;
-    });
+    muted = !muted;
+    context.read<AgoraVideoBloc>().add(MuteUnmute(isMuted: muted));
     _engine.muteLocalAudioStream(muted);
   }
 
@@ -363,7 +368,19 @@ class _CallVideoPageState extends State<CallVideoPage> {
       body: Center(
         child: Stack(
           children: <Widget>[
-            _viewRows(),
+            BlocBuilder<AgoraVideoBloc, AgoraVideoState>(
+              buildWhen: (previous, current) =>
+                  (current is AgoraVideoJoinChannelSuccess ||
+                      current is AgoraVideoStringLeaveChannelSuccess),
+              builder: (context, state) {
+                if (state is AgoraVideoJoinChannelSuccess ||
+                    state is AgoraVideoStringLeaveChannelSuccess) {
+                  return _viewRows();
+                } else {
+                  return SizedBox();
+                }
+              },
+            ),
             _panel(),
             _toolbar(widget.channelName),
           ],

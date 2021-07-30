@@ -33,6 +33,11 @@ class _AgoraVideoHomeState extends State<AgoraVideoHome> {
 
   @override
   Widget build(BuildContext context) {
+    //clear info strings
+    context.watch<AgoraVideoBloc>().infoString.clear();
+    // clear users
+    context.watch<AgoraVideoBloc>().users.clear();
+
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20),

@@ -6,15 +6,12 @@ class AgoraVideoEvent extends Equatable {
 }
 
 class JoinToChannel extends AgoraVideoEvent {
-  JoinToChannel({required this.uid, required this.channel});
-  final String uid;
-  final String channel;
+  JoinToChannel({required this.uid});
+  final int uid;
 
   @override
-  List<Object?> get props => [uid, channel];
+  List<Object?> get props => [uid];
 }
-
-class LeaveChannel extends AgoraVideoEvent {}
 
 class UserOfflineChannel extends AgoraVideoEvent {
   UserOfflineChannel({required this.uid});
@@ -24,9 +21,9 @@ class UserOfflineChannel extends AgoraVideoEvent {
   List<Object?> get props => [uid];
 }
 
-class UserJoinedChannel extends AgoraVideoEvent {
-  UserJoinedChannel({required this.uid});
-  final String uid;
+class UserRemoveChannel extends AgoraVideoEvent {
+  UserRemoveChannel({required this.uid});
+  final int uid;
 
   @override
   List<Object?> get props => [uid];
@@ -45,4 +42,18 @@ class ClearInfoStringsList extends AgoraVideoEvent {
 
   @override
   List<Object?> get props => [];
+}
+
+class ClearUserList extends AgoraVideoEvent {
+  ClearUserList();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class MuteUnmute extends AgoraVideoEvent {
+  MuteUnmute({required this.isMuted});
+  final bool isMuted;
+  @override
+  List<Object?> get props => [isMuted];
 }
